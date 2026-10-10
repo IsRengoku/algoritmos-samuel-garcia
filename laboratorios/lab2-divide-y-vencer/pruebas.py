@@ -56,6 +56,18 @@ assert suma_cruzada(cruce, 0, medio, len(cruce) - 1)[2] == 16
 assert subarreglo_maximo(cruce, 0, medio)[2] == 8
 assert subarreglo_maximo(cruce, medio + 1, len(cruce) - 1)[2] == 8
 
+# Lista vacia: ambas funciones deben rechazarla con ValueError.
+for llamada in (
+    lambda: subarreglo_fuerza_bruta([]),
+    lambda: subarreglo_maximo([], 0, -1),
+):
+    try:
+        llamada()
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("una lista vacia debe lanzar ValueError")
+
 # Listas aleatorias: ambas funciones deben dar la misma suma.
 generador = random.Random(2026)
 for _ in range(30):

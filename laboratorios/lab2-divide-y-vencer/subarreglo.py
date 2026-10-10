@@ -11,7 +11,12 @@ def subarreglo_fuerza_bruta(valores: list[float]) -> tuple[int, int, float]:
     Returns:
         Una tupla (inicio, fin, suma) con los indices inclusivos del
         tramo de mayor suma y el valor de esa suma.
+
+    Raises:
+        ValueError: si la lista esta vacia.
     """
+    if not valores:
+        raise ValueError("la serie debe tener al menos un elemento")
     n = len(valores)
     mejor_inicio, mejor_fin, mejor_suma = 0, 0, valores[0]
     for i in range(n):
@@ -75,7 +80,13 @@ def subarreglo_maximo(
     Returns:
         Una tupla (inicio, fin, suma) del mejor tramo dentro de
         valores[inicio..fin].
+
+    Raises:
+        ValueError: si el rango esta vacio (inicio > fin), por ejemplo
+            cuando la lista no tiene elementos.
     """
+    if inicio > fin:
+        raise ValueError("el rango debe tener al menos un elemento")
     if inicio == fin:
         return inicio, fin, valores[inicio]
 

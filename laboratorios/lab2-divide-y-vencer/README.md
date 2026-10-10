@@ -45,6 +45,7 @@ Ninguna función modifica la lista: se trabaja siempre con índices, sin cortes 
 | Todos negativos | `[-8, -3, -6, -2, -5, -4]` | -2 |
 | Todos positivos | `[4, 1, 7, 3, 2, 9]` | 26 (la serie completa) |
 | Tramo que cruza el medio | `[-8, 1, 7, 6, 2, -9]` | 16; cada mitad por separado solo llega a 8 |
+| Lista vacía | `[]` | ambas funciones lanzan `ValueError` |
 | 30 listas aleatorias | tamaño 1–60, valores en [-100, 100], semilla 2026 | ambas funciones coinciden |
 
 En las listas aleatorias también se recalcula la suma a partir de los índices devueltos, para confirmar que el tramo reportado de verdad suma lo que dice.
