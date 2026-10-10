@@ -4,7 +4,7 @@
 
 ## Cómo reproducir el experimento
 
-Requisitos: Python 3.12 y `matplotlib` (no se usa entorno virtual; la librería se instala en el intérprete del sistema).
+Requisitos: Python 3.12 y `matplotlib`.
 
 ```bash
 # 1. Instalar la única dependencia externa (solo para la gráfica)
@@ -19,8 +19,6 @@ python pruebas.py
 # 4. Ejecutar la medición (imprime la tabla de tiempos y regenera las gráficas)
 python medicion.py
 ```
-
-> Si prefiere aislar la dependencia, puede crear un entorno con `python -m venv .venv`, activarlo (`.venv\Scripts\activate` en Windows o `source .venv/bin/activate` en Linux/macOS) y repetir los pasos 1 a 4.
 
 ---
 
