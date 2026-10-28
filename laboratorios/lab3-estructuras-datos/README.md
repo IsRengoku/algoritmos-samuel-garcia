@@ -31,6 +31,7 @@ Código: [estructuras.py](estructuras.py) · [pruebas.py](pruebas.py)
 - `TablaHash.hash` usa el método de la división, `k mod m`.
 - `TablaHash.insertar` y `TablaHash.buscar` calculan la casilla y delegan en la `ListaEnlazada` de esa casilla (encadenamiento). No se usa `dict`, `set` ni `hash()`.
 - `TablaHash.factor_carga` devuelve `tamano / m`.
+- `TablaHash` rechaza con `ValueError` un número de casillas `m` menor que 1, en vez de fallar después con `ZeroDivisionError` o `IndexError`.
 
 **Cómo se verificó.** `pruebas.py` usa `assert`:
 
@@ -38,6 +39,7 @@ Código: [estructuras.py](estructuras.py) · [pruebas.py](pruebas.py)
 |---|---|
 | Serie de la situación problema | búsqueda exitosa (`1000000024` → "en reparto") e infructuosa (`1000000099` → `None`) en lista y tabla |
 | Estructuras vacías | toda búsqueda devuelve `None`; α = 0 |
+| m inválido | `TablaHash(0)` y `TablaHash(-7)` lanzan `ValueError` |
 | Inserción al inicio | la última guía insertada queda como cabeza |
 | Colisión forzada, m = 7 | 10, 24 y 17 dan `hash == 3`; las tres se encuentran; la casilla 3 mide 3 (por `tamano` y contando nodos); las demás quedan vacías; la guía 3, que cae en la misma casilla, no existe |
 | Factor de carga | `factor_carga() == 3 / 7` tras las tres inserciones |
@@ -98,166 +100,47 @@ En escala lineal la tabla queda pegada al eje; en log-log se ve que es plana:
 
 ### 1. Costo teórico
 
-En una lista enlazada, los elementos no están organizados de una manera que permita encontrar directamente una guía. Por esta razón, cuando buscamos una guía que no existe, es necesario recorrer todos los nodos para comprobar que no está almacenada. Como cada iteración del `while` tiene un costo constante y se realizan n iteraciones, la complejidad de esta operación es Θ(n).
+En una lista enlazada los elementos no están organizados para encontrar directamente una guía. Para saber que una guía no existe hay que recorrer los n nodos, y cada iteración del `while` cuesta tiempo constante: Θ(n).
 
-En cambio, una tabla hash utiliza la operación `k mod m` para determinar en qué posición debería encontrarse una guía. Este cálculo y el acceso a la posición tienen un costo constante. Sin embargo, cuando se utiliza encadenamiento, también debemos recorrer la lista de elementos que hayan quedado almacenados en esa posición.
+La tabla hash usa `k mod m` para saber en qué posición debería estar la guía, en tiempo constante, y luego recorre la lista de esa posición. Si las guías se distribuyen de manera uniforme, cada lista tiene en promedio n / m = α elementos, así que una búsqueda fallida cuesta Θ(1 + α): el 1 es el hash y el acceso, α el recorrido.
 
-Si suponemos que las guías se distribuyen de manera uniforme, cada posición tendrá en promedio n / m elementos, valor que conocemos como el factor de carga α. Por lo tanto, el costo esperado de una búsqueda fallida es Θ(1 + α), donde el 1 representa el cálculo del hash y el acceso a la posición, mientras que α corresponde al recorrido de la cadena.
+El supuesto es el **hashing uniforme simple**: cada guía tiene la misma probabilidad de caer en cualquier posición, independientemente de las demás. Si todas cayeran en la misma posición, tendríamos una lista de n elementos y volveríamos a Θ(n). Esto puede pasar si las claves tienen patrones relacionados con m; un m primo ayuda a evitarlo, aunque no lo garantiza.
 
-Es importante tener en cuenta que este resultado depende del supuesto de **hashing uniforme simple**, es decir, que cada guía tenga la misma probabilidad de ubicarse en cualquiera de las posiciones, independientemente de las demás.
+### 2. Lo medido contra lo esperado
 
-Si todas las guías terminaran en una misma posición, tendríamos una lista de n elementos y la búsqueda volvería a tener complejidad Θ(n). Esto puede suceder, por ejemplo, cuando las claves presentan patrones relacionados con el tamaño de la tabla. Por eso, utilizar un número primo para m puede ayudar a reducir ciertos patrones de colisiones, aunque no garantiza por sí solo una distribución uniforme.
+De 5.000 a 10.000 guías:
 
-### 2. Comparación entre los resultados medidos y los esperados
+- **Lista:** de 297,50 a 538,14 µs, ×1,81. Θ(n) predice ×2: es cercano.
+- **Tabla:** de 0,372 a 0,428 µs, ×1,15. Es prácticamente constante; la diferencia es variación de la medición. De 100 a 50.000 guías se mantuvo entre 0,37 y 0,52 µs sin tendencia.
 
-Al comparar los resultados experimentales con el análisis teórico, podemos observar que el comportamiento de ambas estructuras se acerca a lo esperado.
+En los tamaños grandes la lista crece algo más que lineal: el costo por nodo pasa de 0,05 µs (100 guías) a 0,10 µs (50.000). Una posible explicación es la caché: con muchos nodos dispersos, llegar al siguiente tarda más. Cambia el tiempo real, no la complejidad.
 
-Por ejemplo, cuando la cantidad de elementos pasa de 5.000 a 10.000, los resultados son los siguientes:
+En la segunda gráfica, con α entre 0,25 y 1 el tiempo se queda entre 0,28 y 0,32 µs, dominado por el hash y el acceso. Luego crece: 0,37 µs con α = 2, 0,47 con α = 4 y 1,68 con α = 10. Coincide con Θ(1 + α): un costo fijo más uno que depende de la cadena. El último tramo crece más que lineal, posiblemente por la caché.
 
-- **Lista enlazada:** el tiempo aumenta de 297,50 a 538,14 µs, lo que representa un incremento de 1,81 veces. Teóricamente, una complejidad Θ(n) indica que, al duplicar los elementos, el tiempo debería aumentar aproximadamente al doble. Por lo tanto, el resultado es bastante cercano a lo esperado.
+### 3. Colisiones
 
-- **Tabla hash:** el tiempo pasa de 0,372 a 0,428 µs, equivalente a un incremento de 1,15 veces. Aunque existe una pequeña diferencia, el comportamiento sigue siendo prácticamente constante y puede estar relacionado con las variaciones normales de las mediciones.
+Una colisión ocurre cuando claves diferentes generan la misma posición: con m = 7, las guías 10, 24 y 17 dan 3.
 
-También resulta interesante observar que, al aumentar la cantidad de guías de 100 a 50.000, el tiempo de búsqueda en la tabla hash se mantiene aproximadamente entre 0,37 y 0,52 µs, sin mostrar una tendencia clara de crecimiento.
+Pueden ocurrir aunque haya posiciones libres, porque nada impide que dos claves den el mismo resultado, y con muchos elementos coincidir es muy probable (paradoja del cumpleaños). En el experimento B, con 79.999 posiciones para 20.000 guías, la más ocupada tuvo cuatro.
 
-En el caso de la lista enlazada, el tiempo aumenta de forma aproximadamente lineal, aunque en los tamaños más grandes se presenta un crecimiento ligeramente mayor. Esto se puede observar en el costo por nodo, que pasa de aproximadamente 0,05 µs con 100 elementos a 0,10 µs con 50.000.
+**Encadenamiento:** cada posición guarda una lista enlazada y las guías que chocan se agregan a ella; la posición 3 queda `17 → 24 → 10`. Ventaja: es sencillo, admite α mayor que 1 y eliminar es retirar un nodo. Costo: memoria para los punteros y peor rendimiento con listas largas o nodos dispersos.
 
-Una posible explicación es el comportamiento de la memoria caché. Cuando tenemos muchos nodos distribuidos en diferentes posiciones de memoria, acceder al siguiente elemento puede tardar más. Esto no cambia la complejidad Θ(n), pero sí puede aumentar el tiempo real de ejecución.
-
-Por otra parte, en la segunda gráfica podemos analizar cómo influye el factor de carga α en el rendimiento de la tabla hash.
-
-Cuando α se encuentra entre 0,25 y 1, los tiempos permanecen entre 0,28 y 0,32 µs. En este caso, el costo principal parece estar relacionado con el cálculo del hash y el acceso a la tabla.
-
-A medida que aumenta el factor de carga, los tiempos también empiezan a crecer:
-
-- Con α = 2, el tiempo es de 0,37 µs.
-- Con α = 4, aumenta a 0,47 µs.
-- Con α = 10, llega a 1,68 µs.
-
-Estos resultados permiten observar el comportamiento esperado de Θ(1 + α), ya que existe un costo inicial prácticamente constante y otro que depende de la cantidad de elementos que debemos recorrer.
-
-Aunque en el último tramo el crecimiento parece ser mayor de lo esperado para una relación lineal, esto podría estar relacionado con efectos de memoria caché u otros factores propios de la ejecución.
-
-### 3. Colisiones en una tabla hash
-
-Una colisión ocurre cuando dos o más claves diferentes generan la misma posición dentro de una tabla hash.
-
-Por ejemplo, si tenemos una tabla de tamaño m = 7 y aplicamos la función `k mod m` a las guías 10, 24 y 17, obtenemos la posición 3 en los tres casos.
-
-Esto demuestra que las colisiones pueden presentarse incluso cuando todavía existen posiciones disponibles en la tabla, debido a que diferentes claves pueden producir el mismo resultado.
-
-Además, cuando almacenamos una cantidad considerable de elementos, la probabilidad de que dos coincidan en una misma posición aumenta. Este comportamiento se puede relacionar con la conocida paradoja del cumpleaños.
-
-En el experimento B se observa una situación similar: aunque la tabla tenía 79.999 posiciones para almacenar 20.000 guías, la posición más ocupada llegó a contener cuatro elementos.
-
-Para manejar estas colisiones existen diferentes alternativas, entre las que podemos destacar el encadenamiento y el direccionamiento abierto.
-
-#### Encadenamiento
-
-Este método consiste en almacenar una lista enlazada en cada posición de la tabla. Cuando varias guías generan el mismo índice, se agregan a la lista correspondiente.
-
-En el ejemplo anterior, la posición 3 podría contener la cadena:
-
-```text
-17 → 24 → 10
-```
-
-Su principal ventaja es que resulta sencillo de implementar y permite almacenar más elementos que posiciones disponibles, es decir, trabajar con un factor de carga mayor que 1. Además, eliminar una guía consiste en retirar su nodo de la lista.
-
-Como desventaja, necesita memoria adicional para almacenar los punteros y puede presentar un menor rendimiento cuando las listas son largas o los nodos se encuentran dispersos en memoria.
-
-#### Direccionamiento abierto
-
-A diferencia del encadenamiento, este método almacena todos los elementos directamente dentro del arreglo. Cuando una posición está ocupada, se busca otra disponible siguiendo una secuencia de sondeo.
-
-Por ejemplo, utilizando sondeo lineal y una tabla inicialmente vacía, las guías quedarían distribuidas así:
-
-- Guía 10: posición 3.
-- Guía 24: posición 4.
-- Guía 17: posición 5.
-
-Una de sus ventajas es que no necesita punteros adicionales y los elementos permanecen dentro de una estructura de memoria contigua.
-
-Sin embargo, requiere que el factor de carga sea menor que 1. Además, cuando la tabla empieza a llenarse, aumenta la cantidad de posiciones que debemos revisar y pueden formarse agrupaciones de elementos, lo que afecta el rendimiento. La eliminación también requiere un manejo especial para no interrumpir las búsquedas posteriores.
+**Direccionamiento abierto:** los elementos se guardan en el propio arreglo; si una posición está ocupada se prueba otra. Con sondeo lineal: 10 va a 3, 24 a 4 y 17 a 5. Ventaja: no usa punteros y la memoria es contigua. Costo: exige α menor que 1, al llenarse aumentan las posiciones revisadas y se forman agrupaciones, y eliminar requiere un manejo especial.
 
 ### 4. Tabla hash o árbol de búsqueda
 
-Si necesitamos consultar una guía específica, la tabla hash es una alternativa eficiente. Sin embargo, cuando queremos buscar todas las guías que se encuentren dentro de un rango, su funcionamiento deja de ser tan conveniente.
+La tabla no sirve para el rango, porque `k mod m` no conserva el orden: números consecutivos quedan en posiciones distintas. Habría que recorrer los n elementos, Θ(n), o buscar cada número del rango: un rango de un millón de números con 50 guías serían un millón de búsquedas.
 
-Esto sucede porque la función `k mod m` no conserva el orden de los valores. Dos números consecutivos pueden quedar almacenados en posiciones distintas de la tabla.
+Un árbol binario de búsqueda mantiene los elementos ordenados: se localiza el límite inferior y se recorre en orden hasta superar el superior, evitando las ramas que no interesan. Cuesta O(h + k), con h la altura y k los elementos encontrados.
 
-Por esta razón, para encontrar todas las guías entre X y Y tendríamos que recorrer los n elementos, con un costo de Θ(n), o realizar búsquedas individuales para cada número del rango.
-
-Esta última opción tampoco sería muy eficiente si el intervalo es demasiado amplio. Por ejemplo, podríamos tener un rango de un millón de números y solamente 50 guías registradas, lo que implicaría realizar una gran cantidad de búsquedas innecesarias.
-
-Para este tipo de consultas, un árbol binario de búsqueda resulta más apropiado porque mantiene los elementos ordenados.
-
-Su funcionamiento consiste en localizar primero el límite inferior del rango y después recorrer los elementos en orden hasta superar el límite superior, evitando las ramas que no contienen valores de interés.
-
-El costo de esta operación es O(h + k), donde h representa la altura del árbol y k la cantidad de elementos encontrados.
-
-No obstante, también debemos considerar que el rendimiento depende de cómo esté construido el árbol.
-
-Si insertamos 400.000 guías ordenadas en un árbol binario sin balancear, cada nuevo elemento quedaría a la derecha del anterior. Esto produciría una estructura similar a una lista enlazada, con una altura de 399.999 y búsquedas que podrían necesitar aproximadamente 400.000 comparaciones.
-
-Para evitar este problema, podemos utilizar árboles balanceados, como AVL o rojinegros, que mantienen una altura del orden de log₂(n).
-
-En el caso de 400.000 elementos, log₂(400.000) es aproximadamente 19. Esto permite reducir considerablemente la cantidad de comparaciones necesarias frente a un árbol que no esté balanceado.
+Si las 400.000 guías llegan ordenadas y se insertan sin balancear, cada una queda a la derecha de la anterior: el árbol se vuelve una lista de altura 399.999 y una búsqueda puede requerir unas 400.000 comparaciones. Un árbol balanceado (AVL o rojinegro) mantiene la altura en log₂(400.000) ≈ 19 comparaciones.
 
 ### 5. Recomendación para la jefa de operaciones
 
-Teniendo en cuenta los resultados obtenidos, considero que la mejor alternativa sería combinar una tabla hash con un árbol de búsqueda balanceado, ya que cada estructura responde mejor a un tipo de consulta diferente.
+Recomiendo combinar una tabla hash, para la consulta puntual, con un árbol balanceado, para el rango, ambos apuntando a los mismos envíos. Cuesta memoria para los índices y actualizar las dos estructuras. La tabla debe redimensionarse con un m primo para mantener α cerca de 2.
 
-La tabla hash se utilizaría para buscar una guía específica de manera rápida, mientras que el árbol permitiría realizar consultas por rangos sin necesidad de recorrer todos los registros.
+**Estimación con 5.000.000 de envíos** (son proyecciones, no mediciones):
 
-Ambas estructuras podrían mantener referencias a los mismos envíos, evitando duplicar toda la información. Sin embargo, esta solución requiere memoria adicional para los índices y también implica actualizar ambas estructuras cuando se inserta o elimina un registro.
-
-En el caso de la tabla hash, sería importante aumentar su capacidad conforme crezca la cantidad de envíos, procurando mantener un factor de carga cercano a 2. Para ello, se podría utilizar un tamaño primo adecuado y realizar un redimensionamiento cuando sea necesario.
-
-#### Estimación del rendimiento con 5.000.000 de envíos
-
-A partir de los resultados experimentales, podemos realizar una estimación aproximada del comportamiento que tendría cada estructura con cinco millones de registros. Es importante aclarar que estos valores son **proyecciones** y no mediciones reales.
-
-**Lista enlazada**
-
-En la medición de mayor tamaño, recorrer 50.000 elementos tomó aproximadamente 5.100 µs. Si dividimos este tiempo entre la cantidad de elementos, obtenemos un costo cercano a 0,10 µs por nodo.
-
-Manteniendo esa proporción:
-
-```text
-5.000.000 × 0,10 µs = 500.000 µs ≈ 0,5 segundos
-```
-
-Por lo tanto, una búsqueda fallida podría tardar alrededor de medio segundo. Incluso podría ser mayor, considerando que en los experimentos el costo por nodo aumentó con el tamaño de la lista.
-
-**Tabla hash con α ≈ 2**
-
-En este caso, si aumentamos el tamaño de la tabla junto con la cantidad de elementos, el factor de carga se mantiene controlado.
-
-Según los resultados del experimento, para α = 2 se obtuvo un tiempo cercano a 0,37 µs. Por esta razón, podríamos tomar como referencia un tiempo aproximado de 0,4 µs por búsqueda, posiblemente inferior a 1 µs si las condiciones de ejecución se mantienen similares.
-
-**¿Qué pasaría si no aumentamos el tamaño de la tabla?**
-
-Si mantenemos una tabla con solamente 25.000 posiciones para almacenar cinco millones de guías, el factor de carga sería:
-
-```text
-α = 5.000.000 / 25.000 = 200
-```
-
-Esto significa que cada posición tendría, en promedio, 200 elementos. Si tomamos como referencia el costo de 0,10 µs por nodo utilizado anteriormente, recorrer una cadena completa podría tardar aproximadamente:
-
-```text
-200 × 0,10 µs = 20 µs
-```
-
-Aunque seguiría siendo más rápido que recorrer una lista enlazada de cinco millones de elementos, ya no tendríamos el mismo rendimiento que con un factor de carga bajo.
-
-Este último cálculo es solamente una aproximación, porque el costo por nodo en una tabla hash no necesariamente será igual al de una lista enlazada.
-
-### Conclusión
-
-A partir de los experimentos, podemos concluir que la tabla hash es mucho más conveniente para realizar búsquedas puntuales, siempre que se mantenga una buena distribución de las claves y se controle el factor de carga.
-
-Sin embargo, para consultas por rangos, el árbol balanceado ofrece una ventaja importante al conservar los elementos ordenados.
-
-Por esta razón, utilizar ambas estructuras de manera complementaria sería una buena decisión para un sistema que deba manejar millones de envíos y responder a diferentes tipos de consultas. Aunque implica un mayor consumo de memoria y algo más de trabajo al actualizar los datos, considero que es una inversión razonable frente a la mejora en los tiempos de respuesta.
+- **Lista:** la gráfica muestra crecimiento lineal, así que el tiempo es proporcional a n. Con 50.000 guías se tardaron 5.100 µs, unos 0,10 µs por nodo: 5.000.000 × 0,10 µs ≈ **0,5 s**, quizá más, porque el costo por nodo venía subiendo.
+- **Tabla con α ≈ 2:** el tiempo no depende de n sino de α. Con α = 2 se midieron 0,37 µs, así que espero unos **0,4 µs**, menos de 1 µs.
+- **Tabla sin redimensionar:** con 25.000 posiciones, α = 200 y una búsqueda recorrería unos 200 nodos, ≈ 20 µs. Mejor que la lista, pero ya no constante.
