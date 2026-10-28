@@ -61,7 +61,12 @@ class TablaHash:
 
         Args:
             m: numero de casillas de la tabla.
+
+        Raises:
+            ValueError: si m no es positivo.
         """
+        if m < 1:
+            raise ValueError(f"m debe ser positivo, se recibio {m}")
         self.m = m
         self.casillas: list[ListaEnlazada] = [
             ListaEnlazada() for _ in range(m)

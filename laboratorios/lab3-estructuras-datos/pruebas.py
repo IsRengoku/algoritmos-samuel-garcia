@@ -41,6 +41,15 @@ assert ListaEnlazada().buscar(10) is None
 assert TablaHash(7).buscar(10) is None
 assert TablaHash(7).factor_carga() == 0
 
+# Una tabla sin casillas o con m negativo se rechaza al crearla.
+for m_invalido in (0, -7):
+    try:
+        TablaHash(m_invalido)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(f"TablaHash({m_invalido}) no lanzo ValueError")
+
 # La insercion al inicio deja la ultima guia como cabeza.
 assert lista.cabeza.guia == 1000000005
 
