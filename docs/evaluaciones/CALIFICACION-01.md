@@ -17,9 +17,9 @@
 
 ## Qué se encontró
 
-En su repositorio, en la rama `main` y antes de la fecha límite, no hay ningún trabajo del Laboratorio 1. Se buscó en toda la rama `main`, en las demás ramas y en todo el historial de cambios. Solo aparecen los laboratorios 2 y 3 (carpetas `laboratorios/lab2-divide-y-vencer/` y `laboratorios/lab3-estructuras-datos/`), además de las carpetas `ejercicios-clase` y `benchmarks`, que no corresponden a este laboratorio.
+En su repositorio, en la rama `main` y antes de la fecha límite, no hay ningún trabajo del Laboratorio 1. Solo aparecen los laboratorios 2 y 3 (carpetas `laboratorios/lab2-divide-y-vencer/` y `laboratorios/lab3-estructuras-datos/`), además de las carpetas `ejercicios-clase` y `benchmarks`, que no corresponden a este laboratorio.
 
-No existe la carpeta `lab1-fundamentos-complejidad-recurrencias/` (ni en la raíz ni dentro de `laboratorios/`), ni informe, código o gráficas de este laboratorio. Por eso no hay nada que evaluar y todos los criterios quedan en cero.
+No existe la carpeta `lab1-fundamentos-complejidad-recurrencias/` (ni en la raíz ni dentro de `laboratorios/`), ni informe, código o gráficas de este laboratorio.
 
 ## 1. Corrección conceptual (0 / 25)
 No se entregaron las Partes 1 y 2.
